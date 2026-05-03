@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "排班大師 - 診所班表自動產生器",
+  "version": "1.0",
+  "description": "自動產生符合各種特殊限制的每月班表，專為四人排班設計。",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "排班大師"
+  },
+  "permissions": []
+}
