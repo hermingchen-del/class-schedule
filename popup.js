@@ -173,6 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dayData = currentScheduleData.schedule.find(d => d.date === editingShift.date);
     dayData.config[editingShift.shiftType] = selected;
 
+    // 重新計算總班數與晚班數
+    currentScheduleData.stats = window.Scheduler.getStats(currentScheduleData.schedule);
+
     renderSchedule(currentScheduleData, parseInt(yearSelect.value), parseInt(monthSelect.value));
     editShiftModal.close();
   });

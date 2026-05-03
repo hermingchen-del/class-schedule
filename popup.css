@@ -36,17 +36,9 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-main);
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+  width: 800px;
   min-height: 500px;
   overflow-x: hidden;
-}
-
-@media (min-width: 800px) {
-  body {
-    width: 800px;
-  }
 }
 
 .app-container {
@@ -450,70 +442,5 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 1rem;
-  }
-  
-  .controls-panel {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .schedule-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .styled-table th,
-  .styled-table td {
-    padding: 0.5rem 0.25rem;
-    font-size: 0.85rem;
-  }
-
-  .person-badge {
-    width: 24px;
-    height: 24px;
-    font-size: 0.75rem;
-  }
-
-  .modal {
-    width: 90%;
-    padding: 1.25rem;
-  }
-  
-  .logo-area {
-    gap: 0.75rem;
-  }
-  
-  .icon-placeholder {
-    font-size: 2rem;
-  }
-  
-  .app-header h1 {
-    font-size: 1.25rem;
-  }
-  
-  .styled-table th {
-    font-size: 0.75rem;
-    letter-spacing: normal;
-  }
 }
 

@@ -190,7 +190,9 @@ window.Scheduler = (function() {
     let currentSchedule = JSON.parse(JSON.stringify(bestSchedule));
     let currentScore = bestScore;
 
-    const ITERATIONS = 50000;
+    const ITERATIONS = 100000;
+    let temp = 100.0;
+    const coolingRate = Math.pow(0.01 / temp, 1.0 / ITERATIONS);
     
     for (let i = 0; i < ITERATIONS; i++) {
       let mutDayIndex = Math.floor(Math.random() * daysInMonth);
@@ -199,13 +201,21 @@ window.Scheduler = (function() {
       let date = currentSchedule[mutDayIndex].date;
       let validConfigs = validConfigsPerDay[date];
       
+      if (validConfigs.length <= 1) continue;
+      
       let oldConfig = currentSchedule[mutDayIndex].config;
       let newConfig = randomChoice(validConfigs);
+      while (newConfig === oldConfig && validConfigs.length > 1) {
+        newConfig = randomChoice(validConfigs);
+      }
       
       currentSchedule[mutDayIndex].config = newConfig;
       let newScore = calculateScore(currentSchedule);
       
-      if (newScore <= currentScore) {
+      let delta = newScore - currentScore;
+      
+      // Simulated Annealing acceptance criteria
+      if (delta <= 0 || Math.random() < Math.exp(-delta / temp)) {
         currentScore = newScore;
         if (newScore < bestScore) {
           bestScore = newScore;
@@ -215,6 +225,7 @@ window.Scheduler = (function() {
         currentSchedule[mutDayIndex].config = oldConfig;
       }
 
+      temp *= coolingRate;
       if (bestScore === 0) break;
     }
 
@@ -225,6 +236,7 @@ window.Scheduler = (function() {
   }
 
   return {
-    generate
+    generate,
+    getStats
   };
 })();
