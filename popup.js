@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const yearSelect = document.getElementById('yearSelect');
   const monthSelect = document.getElementById('monthSelect');
   const generateBtn = document.getElementById('generateBtn');
+  const clearLocksBtn = document.getElementById('clearLocksBtn');
   const exportBtn = document.getElementById('exportBtn');
   const loadingIndicator = document.getElementById('loadingIndicator');
   const resultsContainer = document.getElementById('resultsContainer');
@@ -9,7 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const scheduleBody = document.getElementById('scheduleBody');
   const statsContent = document.getElementById('statsContent');
 
+  // Modal elements
+  const editShiftModal = document.getElementById('editShiftModal');
+  const editShiftTitle = document.getElementById('editShiftTitle');
+  const editShiftDesc = document.getElementById('editShiftDesc');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const clearLockBtn = document.getElementById('clearLockBtn');
+  const saveEditBtn = document.getElementById('saveEditBtn');
+  const checkboxes = document.querySelectorAll('#personCheckboxes input[type="checkbox"]');
+
   const DAYS = ['日', '一', '二', '三', '四', '五', '六'];
+  const SHIFT_NAMES = { 'm': '早班', 'a': '午班', 'n': '晚班' };
+
+  let lockedShifts = {};
+  let currentScheduleData = null;
+  let editingShift = null; // { date, shiftType, requiredCount }
 
   // 動態生成年份選項 (民國114年至135年)
   yearSelect.innerHTML = '';
@@ -22,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderSchedule(data, year, month) {
+    currentScheduleData = data;
     scheduleBody.innerHTML = '';
     statsContent.innerHTML = '';
 
@@ -53,12 +69,21 @@ document.addEventListener('DOMContentLoaded', () => {
           return arr.map(p => `<span class="person-badge p-${p}">${p}</span>`).join('');
         };
 
+        const isLocked = (shiftType) => {
+          return lockedShifts[day.date] && lockedShifts[day.date][shiftType];
+        };
+
+        const createCell = (shiftType, arr) => {
+          let lockedClass = isLocked(shiftType) ? 'locked' : '';
+          return `<div class="shift-cell ${lockedClass}" data-date="${day.date}" data-shift="${shiftType}" data-type="${day.type}">${renderBadges(arr)}</div>`;
+        };
+
         tr.innerHTML = `
           <td>${month}/${day.date}</td>
           <td>星期${DAYS[day.dayOfWeek]}</td>
-          <td><div class="shift-cell">${renderBadges(day.config.m)}</div></td>
-          <td><div class="shift-cell">${renderBadges(day.config.a)}</div></td>
-          <td><div class="shift-cell">${renderBadges(day.config.n)}</div></td>
+          <td>${createCell('m', day.config.m)}</td>
+          <td>${createCell('a', day.config.a)}</td>
+          <td>${createCell('n', day.config.n)}</td>
         `;
       }
       scheduleBody.appendChild(tr);
@@ -69,7 +94,105 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resultsContainer.style.display = 'block';
     exportBtn.style.display = 'inline-flex';
+    clearLocksBtn.style.display = Object.keys(lockedShifts).length > 0 ? 'inline-flex' : 'none';
+
+    // 綁定點擊事件以編輯班次
+    document.querySelectorAll('.shift-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        openEditModal(cell, month);
+      });
+    });
   }
+
+  function openEditModal(cell, month) {
+    const date = parseInt(cell.dataset.date);
+    const shiftType = cell.dataset.shift;
+    const dayType = cell.dataset.type;
+    
+    // 判斷該班次需要的人數
+    let requiredCount = 2;
+    if (dayType === 'TueFri' && shiftType === 'm') {
+      requiredCount = 3;
+    }
+
+    editingShift = { date, shiftType, requiredCount };
+
+    // 設定 Modal 文字
+    editShiftTitle.textContent = `${month}/${date} ${SHIFT_NAMES[shiftType]}`;
+    editShiftDesc.textContent = `請選擇 ${requiredCount} 名醫師：`;
+
+    // 取得目前該班次的人員 (若有鎖定則用鎖定的，否則用當前班表的)
+    let currentPersons = [];
+    if (lockedShifts[date] && lockedShifts[date][shiftType]) {
+      currentPersons = lockedShifts[date][shiftType];
+    } else {
+      const dayData = currentScheduleData.schedule.find(d => d.date === date);
+      currentPersons = dayData.config[shiftType];
+    }
+
+    // 更新 Checkbox 狀態
+    checkboxes.forEach(cb => {
+      cb.checked = currentPersons.includes(cb.value);
+    });
+
+    // 如果該班次目前是鎖定狀態，才顯示解除鎖定按鈕
+    clearLockBtn.style.display = (lockedShifts[date] && lockedShifts[date][shiftType]) ? 'inline-flex' : 'none';
+
+    editShiftModal.showModal();
+  }
+
+  cancelEditBtn.addEventListener('click', () => {
+    editShiftModal.close();
+  });
+
+  clearLockBtn.addEventListener('click', () => {
+    if (editingShift && lockedShifts[editingShift.date]) {
+      delete lockedShifts[editingShift.date][editingShift.shiftType];
+      if (Object.keys(lockedShifts[editingShift.date]).length === 0) {
+        delete lockedShifts[editingShift.date];
+      }
+      renderSchedule(currentScheduleData, parseInt(yearSelect.value), parseInt(monthSelect.value));
+    }
+    editShiftModal.close();
+  });
+
+  saveEditBtn.addEventListener('click', () => {
+    const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+    if (selected.length !== editingShift.requiredCount) {
+      alert(`該班次規定必須選擇 ${editingShift.requiredCount} 名醫師，請重新勾選！`);
+      return;
+    }
+
+    // 儲存鎖定狀態
+    if (!lockedShifts[editingShift.date]) {
+      lockedShifts[editingShift.date] = {};
+    }
+    lockedShifts[editingShift.date][editingShift.shiftType] = selected;
+
+    // 直接更新目前的畫面資料並重新渲染（這樣不須重排就能看到畫面變化及鎖頭）
+    const dayData = currentScheduleData.schedule.find(d => d.date === editingShift.date);
+    dayData.config[editingShift.shiftType] = selected;
+
+    renderSchedule(currentScheduleData, parseInt(yearSelect.value), parseInt(monthSelect.value));
+    editShiftModal.close();
+  });
+
+  clearLocksBtn.addEventListener('click', () => {
+    if (confirm('確定要清除所有已鎖定的班次嗎？')) {
+      lockedShifts = {};
+      renderSchedule(currentScheduleData, parseInt(yearSelect.value), parseInt(monthSelect.value));
+    }
+  });
+
+  // 當切換年月時，重置鎖定與結果畫面
+  const handleDateChange = () => {
+    lockedShifts = {};
+    resultsContainer.style.display = 'none';
+    clearLocksBtn.style.display = 'none';
+    currentScheduleData = null;
+  };
+  yearSelect.addEventListener('change', handleDateChange);
+  monthSelect.addEventListener('change', handleDateChange);
 
   generateBtn.addEventListener('click', () => {
     const year = parseInt(yearSelect.value);
@@ -80,11 +203,19 @@ document.addEventListener('DOMContentLoaded', () => {
     loadingIndicator.style.display = 'flex';
 
     setTimeout(() => {
-      const data = window.Scheduler.generate(year, month);
-      renderSchedule(data, year, month);
-      
-      loadingIndicator.style.display = 'none';
-      generateBtn.disabled = false;
+      try {
+        const data = window.Scheduler.generate(year, month, lockedShifts);
+        renderSchedule(data, year, month);
+      } catch (err) {
+        alert(err.message);
+        // 若發生錯誤，退回原本顯示的班表畫面
+        if (currentScheduleData) {
+          renderSchedule(currentScheduleData, year, month);
+        }
+      } finally {
+        loadingIndicator.style.display = 'none';
+        generateBtn.disabled = false;
+      }
     }, 100);
   });
 

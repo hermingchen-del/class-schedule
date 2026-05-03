@@ -123,10 +123,30 @@ window.Scheduler = (function() {
     return { total, night };
   }
 
-  function generate(year, month) {
+  function arraysEqualUnordered(a, b) {
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((val, index) => val === sortedB[index]);
+  }
+
+  function filterConfigsByLocks(configs, locks) {
+    if (!locks) return configs;
+    return configs.filter(c => {
+      if (locks.m && !arraysEqualUnordered(c.m, locks.m)) return false;
+      if (locks.a && !arraysEqualUnordered(c.a, locks.a)) return false;
+      if (locks.n && !arraysEqualUnordered(c.n, locks.n)) return false;
+      return true;
+    });
+  }
+
+  function generate(year, month, lockedShifts = {}) {
     const daysInMonth = new Date(year, month, 0).getDate();
     let initialSchedule = [];
     let satCount = 0;
+    
+    let validConfigsPerDay = {};
 
     for (let date = 1; date <= daysInMonth; date++) {
       let dateObj = new Date(year, month - 1, date);
@@ -150,8 +170,17 @@ window.Scheduler = (function() {
 
       if (type === 'Sun') {
         initialSchedule.push({ date, dayOfWeek, type, config: null });
+        validConfigsPerDay[date] = [];
       } else {
-        initialSchedule.push({ date, dayOfWeek, type, config: randomChoice(CONFIGS[type]) });
+        let validConfigs = CONFIGS[type];
+        if (lockedShifts[date]) {
+          validConfigs = filterConfigsByLocks(validConfigs, lockedShifts[date]);
+          if (validConfigs.length === 0) {
+            throw new Error(`${month}月${date}日的鎖定條件發生衝突（可能違反規則或人數錯誤），請解除部分鎖定後重試。`);
+          }
+        }
+        validConfigsPerDay[date] = validConfigs;
+        initialSchedule.push({ date, dayOfWeek, type, config: randomChoice(validConfigs) });
       }
     }
 
@@ -167,8 +196,11 @@ window.Scheduler = (function() {
       let mutDayIndex = Math.floor(Math.random() * daysInMonth);
       if (currentSchedule[mutDayIndex].type === 'Sun') continue;
 
+      let date = currentSchedule[mutDayIndex].date;
+      let validConfigs = validConfigsPerDay[date];
+      
       let oldConfig = currentSchedule[mutDayIndex].config;
-      let newConfig = randomChoice(CONFIGS[currentSchedule[mutDayIndex].type]);
+      let newConfig = randomChoice(validConfigs);
       
       currentSchedule[mutDayIndex].config = newConfig;
       let newScore = calculateScore(currentSchedule);

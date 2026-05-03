@@ -50,7 +50,10 @@
         </div>
         <div class="action-buttons">
           <button id="generateBtn" class="btn btn-primary">
-            <span class="btn-icon">✨</span> 自動產生班表
+            <span class="btn-icon">✨</span> 產生/重新排班
+          </button>
+          <button id="clearLocksBtn" class="btn btn-warning" style="display: none;">
+            <span class="btn-icon">🔓</span> 清除所有鎖定
           </button>
           <button id="exportBtn" class="btn btn-secondary" style="display: none;">
             <span class="btn-icon">📊</span> 匯出成 Excel
@@ -102,6 +105,24 @@
       </div>
     </main>
   </div>
+  
+  <dialog id="editShiftModal" class="modal">
+    <div class="modal-content">
+      <h3>編輯班表 - <span id="editShiftTitle"></span></h3>
+      <p class="modal-desc" id="editShiftDesc"></p>
+      <div class="checkbox-group" id="personCheckboxes">
+        <label><input type="checkbox" value="A"> <span class="badge badge-A">A翎</span></label>
+        <label><input type="checkbox" value="B"> <span class="badge badge-B">B雪</span></label>
+        <label><input type="checkbox" value="C"> <span class="badge badge-C">C玲</span></label>
+        <label><input type="checkbox" value="D"> <span class="badge badge-D">D郁</span></label>
+      </div>
+      <div class="modal-actions">
+        <button id="cancelEditBtn" class="btn btn-secondary">取消</button>
+        <button id="clearLockBtn" class="btn btn-warning">解除鎖定</button>
+        <button id="saveEditBtn" class="btn btn-primary">儲存並鎖定</button>
+      </div>
+    </div>
+  </dialog>
   
   <script src="scheduler.js"></script>
   <script src="popup.js"></script>
