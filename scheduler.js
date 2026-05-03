@@ -32,7 +32,7 @@ window.Scheduler = (function() {
     let mCandidates, aCandidates, nCandidates;
 
     if (dayType === 'TueFri') {
-      mCandidates = getValidTriples();
+      mCandidates = [...getValidTriples(), ...getValidPairs()];
       aCandidates = getValidPairs();
       nCandidates = getValidPairs();
     } else if (dayType === 'Sat1') {

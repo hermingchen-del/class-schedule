@@ -111,15 +111,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 判斷該班次需要的人數
     let requiredCount = 2;
+    let isTueFriMorning = false;
     if (dayType === 'TueFri' && shiftType === 'm') {
-      requiredCount = 3;
+      isTueFriMorning = true;
     }
 
-    editingShift = { date, shiftType, requiredCount };
+    editingShift = { date, shiftType, requiredCount, isTueFriMorning };
 
     // 設定 Modal 文字
     editShiftTitle.textContent = `${month}/${date} ${SHIFT_NAMES[shiftType]}`;
-    editShiftDesc.textContent = `請選擇 ${requiredCount} 名醫師：`;
+    if (isTueFriMorning) {
+      editShiftDesc.textContent = `請選擇 2 至 3 名醫師：`;
+    } else {
+      editShiftDesc.textContent = `請選擇 ${requiredCount} 名醫師：`;
+    }
 
     // 取得目前該班次的人員 (若有鎖定則用鎖定的，否則用當前班表的)
     let currentPersons = [];
@@ -158,8 +163,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   saveEditBtn.addEventListener('click', () => {
     const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-    if (selected.length !== editingShift.requiredCount) {
-      alert(`該班次規定必須選擇 ${editingShift.requiredCount} 名醫師，請重新勾選！`);
+    
+    if (editingShift.isTueFriMorning) {
+      if (selected.length !== 2 && selected.length !== 3) {
+        alert(`該班次規定必須選擇 2 至 3 名醫師，請重新勾選！`);
+        return;
+      }
+    } else {
+      if (selected.length !== editingShift.requiredCount) {
+        alert(`該班次規定必須選擇 ${editingShift.requiredCount} 名醫師，請重新勾選！`);
+        return;
+      }
+    }
+
+    if (selected.length === 2 && selected.includes('B') && selected.includes('D')) {
+      alert(`B和D不可以單獨一起搭班，請重新勾選！`);
       return;
     }
 
