@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>排班大師 - 班表自動產生器</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="icon-placeholder">📅</div>
+        <div>
+          <h1>排班大師</h1>
+          <p class="subtitle">診所智能班表產生器</p>
+        </div>
+      </div>
+    </header>
+    
+    <main class="app-main">
+      <div class="controls-panel card">
+        <div class="input-group">
+          <label for="yearSelect">年份</label>
+          <div class="select-wrapper">
+            <select id="yearSelect">
+              <!-- 由 popup.js 動態生成 -->
+            </select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="monthSelect">月份</label>
+          <div class="select-wrapper">
+            <select id="monthSelect">
+              <option value="1">1月</option>
+              <option value="2">2月</option>
+              <option value="3">3月</option>
+              <option value="4">4月</option>
+              <option value="5" selected>5月</option>
+              <option value="6">6月</option>
+              <option value="7">7月</option>
+              <option value="8">8月</option>
+              <option value="9">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button id="generateBtn" class="btn btn-primary">
+            <span class="btn-icon">✨</span> 自動產生班表
+          </button>
+          <button id="exportBtn" class="btn btn-secondary" style="display: none;">
+            <span class="btn-icon">📊</span> 匯出成 Excel
+          </button>
+        </div>
+      </div>
+
+      <div id="loadingIndicator" class="loading-state" style="display: none;">
+        <div class="spinner"></div>
+        <p>正在計算最佳班表組合，請稍候...</p>
+      </div>
+
+      <div id="resultsContainer" style="display: none;">
+        <div class="stats-panel card">
+          <h3><span class="icon">📈</span> 班次統計</h3>
+          <div id="statsContent" class="stats-grid">
+            <!-- 統計數據將動態生成於此 -->
+          </div>
+        </div>
+
+        <div class="schedule-panel card">
+          <div class="schedule-header">
+            <h3 id="scheduleTitle">民國115年5月 班表</h3>
+            <div class="legend">
+              <span class="badge badge-A">A翎</span>
+              <span class="badge badge-B">B雪</span>
+              <span class="badge badge-C">C玲</span>
+              <span class="badge badge-D">D郁</span>
+            </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table id="scheduleTable" class="styled-table">
+              <thead>
+                <tr>
+                  <th width="12%">日期</th>
+                  <th width="12%">星期</th>
+                  <th width="25%">早班 (2-3人)</th>
+                  <th width="25%">午班 (2人)</th>
+                  <th width="25%">晚班 (2人)</th>
+                </tr>
+              </thead>
+              <tbody id="scheduleBody">
+                <!-- 班表內容將動態生成於此 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script src="scheduler.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
