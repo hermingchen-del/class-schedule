@@ -27,6 +27,15 @@ window.Scheduler = (function() {
     return false;
   }
 
+  function hasOnlyNightShift(m, a, n) {
+    for (let p of PERSONS) {
+      if (n.includes(p) && !m.includes(p) && !a.includes(p)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function generateDayConfigs(dayType) {
     let configs = [];
     let mCandidates, aCandidates, nCandidates;
@@ -60,7 +69,7 @@ window.Scheduler = (function() {
     for (let m of mCandidates) {
       for (let a of aCandidates) {
         for (let n of nCandidates) {
-          if (!hasSplitShift(m, a, n)) {
+          if (!hasSplitShift(m, a, n) && !hasOnlyNightShift(m, a, n)) {
             configs.push({ m, a, n });
           }
         }
@@ -85,6 +94,32 @@ window.Scheduler = (function() {
   function calculateScore(schedule) {
     let totalCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
     let nightCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
+    let consecutiveThreeShiftsPenalty = 0;
+    let threeShiftsCountPenalty = 0;
+
+    for (let p of PERSONS) {
+      let consecutiveThreeShifts = 0;
+      for (let day of schedule) {
+        if (day.type === 'Sun' || !day.config) {
+          consecutiveThreeShifts = 0;
+          continue;
+        }
+        
+        let worksM = day.config.m.includes(p);
+        let worksA = day.config.a.includes(p);
+        let worksN = day.config.n.includes(p);
+
+        if (worksM && worksA && worksN) {
+          threeShiftsCountPenalty += 5; // Penalty to minimize 3-shift days
+          consecutiveThreeShifts++;
+          if (consecutiveThreeShifts >= 2) {
+            consecutiveThreeShiftsPenalty += 1000; // Massive penalty for consecutive 3-shift days
+          }
+        } else {
+          consecutiveThreeShifts = 0;
+        }
+      }
+    }
 
     for (let day of schedule) {
       if (day.type === 'Sun') continue;
@@ -103,8 +138,8 @@ window.Scheduler = (function() {
       return vals.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0);
     }
 
-    // Heavy penalty for uneven shifts
-    return variance(totalCounts) * 2 + variance(nightCounts) * 5;
+    // Heavy penalty for uneven shifts, and massive penalty for consecutive 3-shifts
+    return variance(totalCounts) * 2 + variance(nightCounts) * 5 + consecutiveThreeShiftsPenalty + threeShiftsCountPenalty;
   }
 
   function getStats(schedule) {
