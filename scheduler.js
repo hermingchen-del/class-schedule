@@ -60,6 +60,10 @@ window.Scheduler = (function() {
       mCandidates = getValidPairs('C');
       aCandidates = getValidPairs('C');
       nCandidates = getValidPairs('C');
+    } else if (dayType === 'Sun') {
+      mCandidates = getValidPairs();
+      aCandidates = [[]];
+      nCandidates = [[]];
     } else {
       mCandidates = getValidPairs();
       aCandidates = getValidPairs();
@@ -84,7 +88,8 @@ window.Scheduler = (function() {
     'Sat1': generateDayConfigs('Sat1'),
     'Sat2': generateDayConfigs('Sat2'),
     'Sat3': generateDayConfigs('Sat3'),
-    'Sat4': generateDayConfigs('Sat4')
+    'Sat4': generateDayConfigs('Sat4'),
+    'Sun': generateDayConfigs('Sun')
   };
 
   function randomChoice(arr) {
@@ -122,7 +127,7 @@ window.Scheduler = (function() {
     }
 
     for (let day of schedule) {
-      if (day.type === 'Sun') continue;
+      if (!day.config) continue;
       
       for (let p of day.config.m) totalCounts[p]++;
       for (let p of day.config.a) totalCounts[p]++;
@@ -147,7 +152,7 @@ window.Scheduler = (function() {
     let night = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
 
     for (let day of schedule) {
-      if (day.type === 'Sun') continue;
+      if (!day.config) continue;
       for (let p of day.config.m) total[p]++;
       for (let p of day.config.a) total[p]++;
       for (let p of day.config.n) {
@@ -203,9 +208,13 @@ window.Scheduler = (function() {
         type = 'Regular';
       }
 
-      if (type === 'Sun') {
-        initialSchedule.push({ date, dayOfWeek, type, config: null });
-        validConfigsPerDay[date] = [];
+      if (lockedShifts[date] && lockedShifts[date].isOff) {
+        initialSchedule.push({ date, dayOfWeek, type, config: { m: [], a: [], n: [] } });
+        validConfigsPerDay[date] = [{ m: [], a: [], n: [] }];
+      } else if (type === 'Sun' && (!lockedShifts[date] || (!lockedShifts[date].m && !lockedShifts[date].a && !lockedShifts[date].n))) {
+        // Default Sunday to off unless explicitly locked or marked not off
+        initialSchedule.push({ date, dayOfWeek, type, config: { m: [], a: [], n: [] } });
+        validConfigsPerDay[date] = [{ m: [], a: [], n: [] }];
       } else {
         let validConfigs = CONFIGS[type];
         if (lockedShifts[date]) {
@@ -231,7 +240,6 @@ window.Scheduler = (function() {
     
     for (let i = 0; i < ITERATIONS; i++) {
       let mutDayIndex = Math.floor(Math.random() * daysInMonth);
-      if (currentSchedule[mutDayIndex].type === 'Sun') continue;
 
       let date = currentSchedule[mutDayIndex].date;
       let validConfigs = validConfigsPerDay[date];

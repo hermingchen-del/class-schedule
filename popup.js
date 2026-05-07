@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const editShiftDesc = document.getElementById('editShiftDesc');
   const cancelEditBtn = document.getElementById('cancelEditBtn');
   const clearLockBtn = document.getElementById('clearLockBtn');
+  const markOffBtn = document.getElementById('markOffBtn');
   const saveEditBtn = document.getElementById('saveEditBtn');
   const checkboxes = document.querySelectorAll('#personCheckboxes input[type="checkbox"]');
 
@@ -57,35 +58,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     data.schedule.forEach(day => {
       const tr = document.createElement('tr');
-      if (day.type === 'Sun') {
-        tr.className = 'row-sun';
-        tr.innerHTML = `
-          <td>${month}/${day.date}</td>
-          <td>星期${DAYS[day.dayOfWeek]}</td>
-          <td colspan="3">休診</td>
-        `;
-      } else {
-        const renderBadges = (arr) => {
-          return arr.map(p => `<span class="person-badge p-${p}">${p}</span>`).join('');
-        };
+      const isDayOff = lockedShifts[day.date]?.isOff || (!day.config.m.length && !day.config.a.length && !day.config.n.length);
+      
+      if (day.dayOfWeek === 0) tr.classList.add('row-sun');
+      if (isDayOff) tr.classList.add('row-off');
 
-        const isLocked = (shiftType) => {
-          return lockedShifts[day.date] && lockedShifts[day.date][shiftType];
-        };
+      const renderBadges = (arr) => {
+        if (arr.length === 0) return '';
+        return arr.map(p => `<span class="person-badge p-${p}">${p}</span>`).join('');
+      };
 
-        const createCell = (shiftType, arr) => {
-          let lockedClass = isLocked(shiftType) ? 'locked' : '';
-          return `<div class="shift-cell ${lockedClass}" data-date="${day.date}" data-shift="${shiftType}" data-type="${day.type}">${renderBadges(arr)}</div>`;
-        };
+      const isLocked = (shiftType) => {
+        return (lockedShifts[day.date] && lockedShifts[day.date][shiftType]) || (lockedShifts[day.date] && lockedShifts[day.date].isOff);
+      };
 
-        tr.innerHTML = `
-          <td>${month}/${day.date}</td>
-          <td>星期${DAYS[day.dayOfWeek]}</td>
-          <td>${createCell('m', day.config.m)}</td>
-          <td>${createCell('a', day.config.a)}</td>
-          <td>${createCell('n', day.config.n)}</td>
-        `;
-      }
+      const createCell = (shiftType, arr) => {
+        let lockedClass = isLocked(shiftType) ? 'locked' : '';
+        let offClass = arr.length === 0 ? 'is-off' : '';
+        return `<div class="shift-cell ${lockedClass} ${offClass}" data-date="${day.date}" data-shift="${shiftType}" data-type="${day.type}">${renderBadges(arr)}</div>`;
+      };
+
+      tr.innerHTML = `
+        <td>${month}/${day.date}</td>
+        <td>星期${DAYS[day.dayOfWeek]}</td>
+        <td>${createCell('m', day.config.m)}</td>
+        <td>${createCell('a', day.config.a)}</td>
+        <td>${createCell('n', day.config.n)}</td>
+      `;
       scheduleBody.appendChild(tr);
     });
 
@@ -140,8 +139,12 @@ document.addEventListener('DOMContentLoaded', () => {
       cb.checked = currentPersons.includes(cb.value);
     });
 
-    // 如果該班次目前是鎖定狀態，才顯示解除鎖定按鈕
-    clearLockBtn.style.display = (lockedShifts[date] && lockedShifts[date][shiftType]) ? 'inline-flex' : 'none';
+    // 如果該日目前是全日休診或該班次是鎖定狀態，才顯示解除鎖定按鈕
+    const isLocked = (lockedShifts[date] && (lockedShifts[date][shiftType] || lockedShifts[date].isOff));
+    clearLockBtn.style.display = isLocked ? 'inline-flex' : 'none';
+    
+    // 如果目前已經是全日休診，隱藏「全日休診」按鈕，改由「解除鎖定」處理
+    markOffBtn.style.display = (lockedShifts[date] && lockedShifts[date].isOff) ? 'none' : 'inline-flex';
 
     editShiftModal.showModal();
   }
@@ -152,10 +155,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   clearLockBtn.addEventListener('click', () => {
     if (editingShift && lockedShifts[editingShift.date]) {
-      delete lockedShifts[editingShift.date][editingShift.shiftType];
+      if (lockedShifts[editingShift.date].isOff) {
+        delete lockedShifts[editingShift.date].isOff;
+      } else {
+        delete lockedShifts[editingShift.date][editingShift.shiftType];
+      }
+      
       if (Object.keys(lockedShifts[editingShift.date]).length === 0) {
         delete lockedShifts[editingShift.date];
       }
+      renderSchedule(currentScheduleData, parseInt(yearSelect.value), parseInt(monthSelect.value));
+    }
+    editShiftModal.close();
+  });
+
+  markOffBtn.addEventListener('click', () => {
+    if (editingShift) {
+      if (!lockedShifts[editingShift.date]) {
+        lockedShifts[editingShift.date] = {};
+      }
+      lockedShifts[editingShift.date] = { isOff: true };
+      
+      const dayData = currentScheduleData.schedule.find(d => d.date === editingShift.date);
+      dayData.config = { m: [], a: [], n: [] };
+      
+      // 重新計算總班數與晚班數
+      currentScheduleData.stats = window.Scheduler.getStats(currentScheduleData.schedule);
       renderSchedule(currentScheduleData, parseInt(yearSelect.value), parseInt(monthSelect.value));
     }
     editShiftModal.close();
@@ -184,6 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 儲存鎖定狀態
     if (!lockedShifts[editingShift.date]) {
       lockedShifts[editingShift.date] = {};
+    }
+    // 如果原本是全日休診，現在儲存特定班次，要移除 isOff
+    if (lockedShifts[editingShift.date].isOff) {
+      delete lockedShifts[editingShift.date].isOff;
     }
     lockedShifts[editingShift.date][editingShift.shiftType] = selected;
 
